@@ -50,7 +50,8 @@ a{text-decoration:none}
         <div><label>姓名關鍵字</label><input id="fName" placeholder="例如：小麥" style="width:130px"></div>
         <div><label>日期</label><input id="fDate" type="date"></div>
         <div><button class="btn" id="searchBtn">🔍 篩選</button>
-        <button class="btn ghost" id="clearBtn">清除</button></div>
+        <button class="btn ghost" id="clearBtn">清除</button>
+        <button class="btn ghost" id="csvBtn">📥 匯出 CSV</button></div>
       </div>
       <div class="stats" id="stats"></div>
       <div style="overflow:auto">
@@ -106,6 +107,7 @@ async function search(){
     if(date){ q=q.gte('created_at',date+'T00:00:00').lt('created_at',date+'T23:59:59.999'); }
     const {data,error}=await q;
     if(error) throw error;
+    lastRows=data;
     if(!data.length){ tb.innerHTML='<tr><td colspan="7">沒有符合的紀錄 🎉（可能全對，太厲害了！）</td></tr>'; }
     else{
       tb.innerHTML=data.map(r=>'<tr><td>'+fmtTime(r.created_at)+'</td><td>'+esc(r.class_name||'-')+'</td><td>'+esc(r.player_name)+'</td><td>'+esc(r.seat_no||'-')+'</td><td>'+r.level+'</td><td>'+(AXIS[r.axis]||esc(r.axis))+'</td><td>'+r.accuracy+'%</td></tr>').join('');
@@ -123,6 +125,18 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   document.getElementById('fName').value='';
   document.getElementById('fDate').value='';
   search();
+});
+let lastRows=[];
+document.getElementById('csvBtn').addEventListener('click', ()=>{
+  if(!lastRows.length){ alert('目前沒有資料可匯出'); return; }
+  const head='時間,班級,姓名,座號,關卡,軸線,準確率%\n';
+  const body=lastRows.map(r=>[fmtTime(r.created_at),r.class_name||'',r.player_name,r.seat_no||'',r.level,(AXIS[r.axis]||r.axis),r.accuracy].map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+head+body],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='錯題紀錄_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
 });
 </script>
 </body>
