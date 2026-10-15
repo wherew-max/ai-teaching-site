@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>鏡像城市：線對稱建築大師</title>
+<style>
+:root{--bg:#0a1026;--panel:#131a3a;--accent:#6ee7ff;--warm:#ff7b54;--gold:#facc15;--good:#34d399;--bad:#f87171;}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(900px 500px at 50% -10%,#101a3a,#040814);color:#eaf2ff;font-family:"Segoe UI","Noto Sans TC","PingFang TC",sans-serif;overflow:hidden}
+.wrap{display:grid;grid-template-columns:260px 1fr 260px;height:100vh;gap:10px;padding:10px}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;backdrop-filter:blur(6px);overflow:auto}
+h1{margin:0 0 6px;font-size:20px;color:var(--accent)}
+.sub{font-size:12px;opacity:.75;margin-bottom:10px}
+.stat{display:flex;justify-content:space-between;margin:6px 0;font-size:14px}
+.stat b{color:var(--gold)}
+.btn{width:100%;padding:10px;margin:6px 0;border:none;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7c5cff);color:#041022;font-weight:700;cursor:pointer;transition:.15s;box-shadow:0 4px 14px rgba(110,231,255,.25)}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.1)}
+.btn.ghost{background:rgba(255,255,255,.08);color:#eaf2ff;border:1px solid rgba(255,255,255,.2)}
+.canvas-wrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.15);background:#060a16;align-self:start}
+canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:rgba(4,8,24,.82);backdrop-filter:blur(4px)}
+.overlay h2{margin:0;font-size:28px;color:var(--gold)}
+.overlay p{max-width:520px;text-align:center;opacity:.9}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(110,231,255,.15);border:1px solid rgba(110,231,255,.4);font-size:12px;margin:2px}
+.city{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.building{height:38px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,#93c5fd,#3b82f6);position:relative;overflow:hidden;transition:all .4s}
+.building::after{content:"";position:absolute;bottom:0;left:0;right:0;height:8px;background:rgba(0,0,0,.25)}
+.building.empty{background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.2)}
+.building.built{background:linear-gradient(180deg,#fde68a,#f59e0b);box-shadow:0 0 10px rgba(250,204,21,.6)}
+.tip{font-size:12px;opacity:.8;line-height:1.6}
+.legend{font-size:12px;margin-top:8px}
+.legend span{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:middle}
+@media(max-width:900px){.wrap{grid-template-columns:1fr;height:auto}.panel{height:30vh}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <a href="../../index.html" style="text-decoration:none"><button class="btn ghost" style="margin-top:0">🏠 回到教學天地首頁</button></a>
+    <h1>🏙️ 鏡像城市</h1>
+    <div class="sub">五年級線對稱圖形挑戰 · 把左半建築鏡像成右半，房子才會落成！</div>
+    <div class="stat">分數 <b id="score">0</b></div>
+    <div class="stat">關卡 <b id="level">1</b></div>
+    <div class="stat">成功建造 <b id="built">0</b></div>
+    <div class="stat">目前軸線 <b id="axisname">垂直線</b></div>
+    <button class="btn" id="submitBtn">✅ 送出鏡像</button>
+    <button class="btn ghost" id="undoBtn">↩ 還原上一步</button>
+    <button class="btn ghost" id="clearBtn">🧹 清除</button>
+    <button class="btn ghost" id="hintBtn">💡 提示</button>
+    <div class="tip" id="tip">提示：點一下鏡像那一側的格子來著色，再點一下可取消，塗出和左半對稱的圖案。</div>
+    <div class="legend">圖例：<span style="background:#6ee7ff"></span>對稱軸 <span style="background:#60a5fa"></span>藍圖 <span style="background:#facc15"></span>你塗的格 <span style="background:#34d399"></span>正解</div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="game" width="720" height="720"></canvas>
+    <div class="overlay" id="startOverlay">
+      <h2>🏙️ 鏡像城市</h2>
+      <p>我是建築師。藍色藍圖已經給你，請在軸線的另一側「點格子著色」，塗出線對稱的鏡像，房子才會落成！<br>點一下著色、再點一下取消，記得數格子喔！</p>
+      <div><span class="badge">鼠標 / 觸控皆可</span><span class="badge">點格子著色</span><span class="badge">可 Undo</span></div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;width:min(420px,92%)">
+        <input id="inClass" placeholder="班級（選填）" maxlength="12" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;width:110px;text-align:center">
+        <input id="inName" placeholder="姓名（選填）" maxlength="12" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;width:130px;text-align:center">
+        <input id="inSeat" placeholder="座號（選填）" maxlength="6" inputmode="numeric" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;width:100px;text-align:center">
+      </div>
+      <div class="tip" style="font-size:11px">沒填也沒關係，會以「訪客」身分遊玩喔！</div>
+      <button class="btn" id="startBtn" style="width:200px">開始建造</button>
+      <div style="width:min(300px,90%);text-align:center">
+        <button class="btn ghost" id="teacherBtn" style="width:200px;font-size:13px;padding:7px">👩‍🏫 教師後台</button>
+        <div id="teacherGate" style="display:none;margin-top:8px">
+          <input id="teacherPw" type="password" placeholder="請輸入教師密碼" maxlength="12" style="padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;width:150px;text-align:center">
+          <button class="btn ghost" id="teacherGo" style="width:100px;font-size:13px;padding:9px">進入</button>
+          <div class="tip" id="teacherMsg" style="min-height:16px;color:#f87171"></div>
+        </div>
+      </div>
+    </div>
+    <div class="overlay" id="endOverlay" style="display:none">
+      <h2 id="endTitle">🎉 城市完成！</h2>
+      <p id="endText"></p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <input id="playerName" placeholder="輸入你的名字" maxlength="12" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;width:160px;text-align:center">
+        <button class="btn" id="saveScoreBtn" style="width:160px;margin:0">🏆 上傳分數</button>
+      </div>
+      <div class="tip" id="saveMsg" style="min-height:18px"></div>
+      <div style="width:min(320px,90%)"><h3 style="margin:6px 0;color:var(--gold)">🏆 全班排行榜</h3><ol id="board" style="text-align:left;font-size:14px;line-height:1.8;margin:0;padding-left:22px"><li>載入中…</li></ol></div>
+      <button class="btn" id="restartBtn" style="width:200px">再玩一次</button>
+      <a href="../../index.html" style="text-decoration:none"><button class="btn ghost" style="width:200px">🏠 回到首頁</button></a>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h1>🏠 我的城市</h1>
+    <div class="sub">每建造成功 1 棟，城市就多一棟房子。</div>
+    <div class="city" id="city"></div>
+    <hr style="border-color:rgba(255,255,255,.1)">
+    <div class="tip">
+      <b>五年級重點：</b><br>
+      • 線對稱：圖形沿著一條軸線折疊後兩邊完全重合。<br>
+      • 垂直線是左右對稱，水平線是上下對稱<br>
+      • 試著在動手前「腦中鏡像」，一格一格數過去
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const midX = W/2, midY = H/2;
+
+let state = 'start';
+let score = 0, level = 1, built = 0;
+let axisType = 'vertical';
+let leftCells = [];
+let expectedCells = [];
+let userSet = new Set();
+let paintHistory = [];
+let hintCell = null;
+let hintUntil = 0;
+let particles = [];
+let buildings = [];
+let revealExpected = false;
+let shakeUntil = 0;
+const cityEl = document.getElementById('city');
+const grid = 60;
+
+let audioCtx = null;
+function beep(freq=440, dur=0.12, type='sine', vol=0.08){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+// 方格著色模式：圖形 = 格子集合 [i,j]（以中心為原點的格子座標）
+function R(x1,y1,x2,y2){ const c=[]; for(let i=x1;i<=x2;i++) for(let j=y1;j<=y2;j++) c.push([i,j]); return c; }
+// 每題不超過 20 格；格子座標 i,j 範圍 [-5,5]，軸線走在格子間隙正中央
+const cellLibs = {
+  vertical: [
+    [...R(-3,1,-1,3), ...R(-3,0,-1,0), ...R(-2,-1,-2,-1)].filter(([i,j])=>!(i===-2&&j===2)),
+    [...R(-4,1,-2,3), ...R(-2,-1,-2,0)].filter(([i,j])=>!(i===-3&&j===2)),
+  ],
+  horizontal: [
+    [...R(-2,-4,0,-2), ...[[-3,-3],[1,-3],[-1,-5],[-1,-1]]].filter(([i,j])=>!(i===-1&&j===-3)),
+    [...R(-1,-4,1,-2), ...R(0,-1,0,-1)].filter(([i,j])=>!(i===0&&j===-3)),
+  ],
+};
+function mirrorCell([i,j], type){
+  if(type==='vertical') return [-i,j];
+  return [i,-j];
+}
+// 學生只能在鏡像那一側著色
+function onPaintSide([i,j], type){
+  if(type==='vertical') return i>0;
+  return j>0;
+}
+const key = ([i,j])=>i+','+j;
+function shapeCellsFor(type, levelIdx){
+  const lib = cellLibs[type];
+  return lib[Math.floor(levelIdx/2) % lib.length];
+}
+
+function axisName(t){
+  return {vertical:'垂直線（左右對稱）',horizontal:'水平線（上下對稱）'}[t];
+}
+
+function newLevel(){
+  const pool = ['vertical','horizontal'];
+  axisType = pool[(level-1)%2];
+  document.getElementById('axisname').textContent = axisName(axisType);
+  document.getElementById('level').textContent = level;
+
+  leftCells = shapeCellsFor(axisType, level-1);
+  expectedCells = leftCells.map(c=>mirrorCell(c, axisType));
+
+  userSet = new Set();
+  paintHistory = [];
+  hintCell = null;
+  revealExpected = false;
+  shakeUntil = 0;
+  state='play';
+  hideOverlay();
+  requestAnimationFrame(loop);
+}
+
+let studentClass='', studentName='訪客', studentSeat='';
+function startGame(){
+  studentClass=(document.getElementById('inClass').value||'').trim();
+  studentName=(document.getElementById('inName').value||'').trim()||'訪客';
+  studentSeat=(document.getElementById('inSeat').value||'').trim();
+  document.getElementById('playerName').value = studentName==='訪客'?'':studentName;
+  score=0; level=1; built=0;
+  buildings=[];
+  for(let i=0;i<10;i++) buildings.push('empty');
+  renderCity();
+  newLevel();
+  document.getElementById('score').textContent=score;
+  document.getElementById('endOverlay').style.display='none';
+  beep(520,.15,'triangle');
+}
+
+function renderCity(){
+  cityEl.innerHTML='';
+  buildings.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.className='building '+s;
+    if(s!=='empty') d.style.opacity= (i<built?1:.35);
+    cityEl.appendChild(d);
+  });
+}
+function hideOverlay(){ document.getElementById('startOverlay').style.display='none'; }
+
+function toCanvas(e){
+  const r = canvas.getBoundingClientRect();
+  const src = e.touches? e.touches[0] : e;
+  const cx = src.clientX;
+  const cy = src.clientY;
+  return {x: (cx-r.left)*(W/r.width), y:(cy-r.top)*(H/r.height)};
+}
+canvas.addEventListener('click', e=>{
+  if(state!=='play') return;
+  const p = toCanvas(e);
+  const i = Math.floor((p.x-midX)/grid+0.5), j = Math.floor((p.y-midY)/grid+0.5);
+  if(i<-5||i>5||j<-5||j>5){ return; }
+  if(!onPaintSide([i,j], axisType)){ beep(220,.08,'sine',.05); return; }
+  const k = key([i,j]);
+  if(userSet.has(k)){ userSet.delete(k); } else { userSet.add(k); }
+  paintHistory.push(k);
+  beep(660,.06);
+});
+
+document.getElementById('undoBtn').addEventListener('click',()=>{ if(paintHistory.length && state==='play'){ const k=paintHistory.pop(); if(userSet.has(k)) userSet.delete(k); else userSet.add(k); beep(300,.06);} });
+document.getElementById('clearBtn').addEventListener('click',()=>{ if(state==='play'){ userSet=new Set(); paintHistory=[]; hintCell=null; beep(260,.06);} });
+document.getElementById('hintBtn').addEventListener('click',()=>{
+  if(state!=='play') return;
+  const tip=document.getElementById('tip');
+  const miss = expectedCells.find(c=>!userSet.has(key(c)));
+  if(!miss){ tip.textContent='太棒了！鏡像格看起來都塗滿了，快按送出吧！'; return; }
+  hintCell = miss; hintUntil = performance.now()+3000;
+  tip.textContent = '提示：軸線是「'+axisName(axisType)+'」。有一格還沒塗到喔（已經幫你閃爍提示），數數看它離軸線幾格！';
+  beep(480,.08);
+});
+
+document.getElementById('submitBtn').addEventListener('click', evaluate);
+
+function evaluate(){
+  if(state!=='play' || userSet.size===0) { beep(180,.12,'sawtooth'); return; }
+  state='locked';
+  hintCell = null;
+  const expSet = new Set(expectedCells.map(key));
+  let matches = 0;
+  for(const k of userSet){ if(expSet.has(k)) matches++; }
+  const acc = matches / expectedCells.length;
+  const extra = userSet.size - matches;
+  const finalAcc = Math.max(0, acc - Math.max(0, extra-2)*0.05);
+  const tip=document.getElementById('tip');
+
+  if(finalAcc >= 0.85){
+    score += 100 + level*10 + Math.round((1-(Math.abs(userSet.size-expectedCells.length)/expectedCells.length))*20);
+    built = Math.min(10, built+1);
+    if(buildings[built-1]) buildings[built-1]='built';
+    renderCity();
+    tip.textContent = '🎉 完美！房子落成。準確率 '+(finalAcc*100).toFixed(0)+'%。';
+    revealExpected = true;
+    spawnParticles(midX, midY, 'good');
+    beep(784,.12,'triangle'); setTimeout(()=>beep(988,.18,'triangle'),120);
+    setTimeout(()=>{
+      level++;
+      if(level>10){ endGame(true); }
+      else { newLevel(); }
+    }, 1200);
+  } else {
+    tip.textContent = '💥 對稱偏差太大，房子倒了！準確率 '+(finalAcc*100).toFixed(0)+'%。再試一次。';
+    logMistake(finalAcc);
+    shakeUntil = performance.now()+500;
+    revealExpected = true;
+    state='play';
+    spawnParticles(midX, midY, 'bad');
+    beep(180,.2,'sawtooth'); setTimeout(()=>beep(120,.25,'sawtooth'),180);
+  }
+  document.getElementById('score').textContent=score;
+  document.getElementById('built').textContent=built;
+}
+
+function endGame(win){
+  state='end';
+  const el=document.getElementById('endOverlay');
+  el.style.display='flex';
+  document.getElementById('endTitle').textContent = win?'🎉 城市完成！':'⏰ 遊戲結束';
+  document.getElementById('endText').textContent = '最終分數：'+score+'，成功建造 '+built+' 棟房子。'+(win?' 你已成為鏡像建築大師！':'');
+  beep(660,.2);
+  loadBoard();
+}
+
+// ----- Supabase 排行榜 -----
+const SB_URL='https://arjomhkzyugiuuzqtezs.supabase.co';
+const SB_KEY='sb_publishable_fOv8SaMnTPNtDPFYhRm7dw_Yq9QYBIs';
+let sb=null;
+try{ if(window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY); }catch(e){}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function logMistake(acc){
+  if(!sb) return;
+  sb.from('mistakes').insert({class_name:studentClass,player_name:studentName,seat_no:studentSeat,level:level,axis:axisType,accuracy:Math.round(acc*100)}).then(()=>{},{});
+}
+// ----- 教師後台密碼門 -----
+document.getElementById('teacherBtn').addEventListener('click', ()=>{
+  const g=document.getElementById('teacherGate');
+  g.style.display = g.style.display==='none'?'block':'none';
+  document.getElementById('teacherMsg').textContent='';
+});
+function tryTeacher(){
+  if(document.getElementById('teacherPw').value==='8888'){ location.href='teacher.html'; }
+  else { document.getElementById('teacherMsg').textContent='❌ 密碼錯誤'; beep(180,.15,'sawtooth'); }
+}
+document.getElementById('teacherGo').addEventListener('click', tryTeacher);
+document.getElementById('teacherPw').addEventListener('keydown', e=>{ if(e.key==='Enter') tryTeacher(); });
+async function loadBoard(){
+  const ol=document.getElementById('board');
+  if(!ol) return;
+  if(!sb){ ol.innerHTML='<li>排行榜離線中（本機遊玩不受影響）</li>'; return; }
+  try{
+    const {data,error}=await sb.from('scores').select('player_name,score,built').order('score',{ascending:false}).limit(10);
+    if(error) throw error;
+    ol.innerHTML = data.length? data.map((r,i)=>'<li>'+(['🥇','🥈','🥉'][i]||((i+1)+'.'))+' '+escapeHtml(r.player_name)+' — '+r.score+' 分（'+r.built+' 棟）</li>').join('') : '<li>還沒有分數，快來當第一名！</li>';
+  }catch(e){ ol.innerHTML='<li>排行榜載入失敗，稍後再試</li>'; }
+}
+document.getElementById('saveScoreBtn').addEventListener('click', async ()=>{
+  const msg=document.getElementById('saveMsg');
+  const name=(document.getElementById('playerName').value||'').trim()||'小小建築師';
+  if(!sb){ msg.textContent='目前離線，分數先記在心裡就好！'; return; }
+  msg.textContent='上傳中…';
+  try{
+    const {error}=await sb.from('scores').insert({player_name:name,score:score,built:built,class_name:studentClass,seat_no:studentSeat});
+    if(error) throw error;
+    msg.textContent='✅ 上傳成功！';
+    loadBoard();
+  }catch(e){ msg.textContent='❌ 上傳失敗，請稍後再試'; }
+});
+
+function spawnParticles(x,y,type){
+  for(let i=0;i<40;i++){
+    particles.push({
+      x,y,
+      vx:(Math.random()-0.5)*6, vy:(Math.random()-0.5)*6-2,
+      life: 1,
+      color: type==='good'?['#34d399','#facc15','#6ee7ff'][Math.floor(Math.random()*3)] : ['#f87171','#fb923c'][Math.floor(Math.random()*2)],
+      size: 2+Math.random()*4
+    });
+  }
+}
+
+function drawAxis(){
+  ctx.save();
+  ctx.strokeStyle='rgba(110,231,255,.6)';
+  ctx.setLineDash([8,6]);
+  ctx.lineWidth=2;
+  if(axisType==='vertical'){
+    ctx.beginPath(); ctx.moveTo(midX,0); ctx.lineTo(midX,H); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(0,midY); ctx.lineTo(W,midY); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function cellXY([i,j]){ return [midX+(i-0.5)*grid, midY+(j-0.5)*grid]; }
+function drawCells(cells, color, alpha=0.85){
+  ctx.save();
+  ctx.fillStyle=color; ctx.globalAlpha=alpha;
+  for(const c of cells){
+    const [x,y]=cellXY(c);
+    ctx.fillRect(x+2, y+2, grid-4, grid-4);
+  }
+  ctx.restore();
+}
+function drawCellSet(set, color, alpha=0.9){
+  ctx.save();
+  ctx.fillStyle=color; ctx.globalAlpha=alpha;
+  for(const k of set){
+    const [x,y]=cellXY(k.split(',').map(Number));
+    ctx.fillRect(x+2, y+2, grid-4, grid-4);
+  }
+  ctx.restore();
+}
+
+function loop(){
+  const shaking = shakeUntil && performance.now() < shakeUntil;
+  if(shaking){ ctx.save(); ctx.translate((Math.random()-0.5)*10, (Math.random()-0.5)*10); }
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#060a16'); grad.addColorStop(1,'#02040c');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='rgba(170,200,255,.24)';
+  ctx.lineWidth=2;
+  for(let k=-6;k<=5;k++){
+    const x=midX+(k+0.5)*grid, y=midY+(k+0.5)*grid;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(170,200,255,.45)';
+  ctx.strokeRect(midX-5.5*grid, midY-5.5*grid, 11*grid, 11*grid);
+
+  drawAxis();
+  drawCells(leftCells, '#60a5fa', 0.85);
+  if(revealExpected){ drawCells(expectedCells, 'rgba(52,211,153,.9)', 0.9); }
+  drawCellSet(userSet, '#facc15', 0.9);
+  if(hintCell && performance.now() < hintUntil){
+    const blink = Math.floor(performance.now()/300)%2===0;
+    drawCells([hintCell], blink?'#ffffff':'#f472b6', 0.95);
+  }
+
+  ctx.fillStyle='rgba(255,255,255,.05)';
+  ctx.fillRect(0,H-24,W,24);
+
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.15; p.life-=0.02;
+    ctx.globalAlpha=Math.max(0,p.life);
+    ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+    if(p.life<=0) particles.splice(i,1);
+  }
+  if(shaking){ ctx.restore(); }
+  if(state==='play') requestAnimationFrame(loop);
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+
+(function init(){
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#060a16'); grad.addColorStop(1,'#02040c');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<10;i++) buildings.push('empty');
+  renderCity();
+})();
+</script>
+</body>
+</html>
