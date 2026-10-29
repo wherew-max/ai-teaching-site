@@ -152,7 +152,7 @@ function renderTool(cfg){
           showPraise(d, n);
         }
         b.className = seats[idx] ? 'seat done' : 'seat';
-        b.innerHTML = seats[idx] ? (idx+1)+'<br>完成' : (idx+1);
+        b.textContent = seats[idx] ? '完成' : (idx+1);
         save(cfg.id, {title:elTitle.value, count:elCount.value, seats});
         updateStats();
       });
