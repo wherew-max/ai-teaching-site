@@ -51,7 +51,7 @@ h1 small{display:block; font-size:14px; color:#8a7a99; letter-spacing:4px; margi
 .seats{display:flex; flex-wrap:wrap; gap:6px}
 .seat{
   width:44px; height:44px; border-radius:12px; border:2px solid #eee;
-  background:#fff; color:#999; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; user-select:none
+  background:#fff; color:#999; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; user-select:none; white-space:normal; line-height:1.1
 }
 .seat:hover{border-color:#FFC93C}
 .seat.done{background:var(--done); color:#fff; border-color:var(--done)}
@@ -152,7 +152,7 @@ function renderTool(cfg){
           showPraise(d, n);
         }
         b.className = seats[idx] ? 'seat done' : 'seat';
-        b.textContent = seats[idx] ? (idx+1)+'完成' : (idx+1);
+        b.innerHTML = seats[idx] ? (idx+1)+'<br>完成' : (idx+1);
         save(cfg.id, {title:elTitle.value, count:elCount.value, seats});
         updateStats();
       });
