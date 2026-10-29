@@ -61,6 +61,22 @@ h1 small{display:block; font-size:14px; color:#8a7a99; letter-spacing:4px; margi
 .reset:hover{background:#ddd}
 footer{text-align:center; margin-top:22px; font-size:13px; color:#8a7a99}
 .save-note{font-size:12px; opacity:.7; margin-top:6px; color:#8a7a99}
+.praise{
+  position:absolute;
+  top:-8px; left:50%;
+  transform:translateX(-50%);
+  font-size:19px; font-weight:900;
+  color:#ff578a; background:rgba(255,247,230,.96);
+  border:2px solid #ffc93c; border-radius:14px;
+  padding:6px 14px; z-index:10; white-space:nowrap;
+  box-shadow:0 8px 20px rgba(248,87,138,.25);
+  animation:praise-fly 1.4s ease-out forwards;
+}
+@keyframes praise-fly{
+  0%{transform:translateX(-50%) translateY(0) scale(.6); opacity:0;}
+  20%{transform:translateX(-50%) translateY(-16px) scale(1.15); opacity:1;}
+  100%{transform:translateX(-50%) translateY(-38px) scale(1); opacity:0;}
+}
 </style>
 </head>
 <body>
@@ -131,6 +147,10 @@ function renderTool(cfg){
       b.textContent = idx+1;
       b.addEventListener('click', ()=>{
         seats[idx] = !seats[idx];
+        const n = seats.filter(Boolean).length;
+        if(seats[idx] && n>=1 && n<=10){
+          showPraise(d, n);
+        }
         b.className = seats[idx] ? 'seat done' : 'seat';
         b.textContent = seats[idx] ? '完成' : (idx+1);
         save(cfg.id, {title:elTitle.value, count:elCount.value, seats});
@@ -144,6 +164,14 @@ function renderTool(cfg){
     const n = seats.filter(Boolean).length;
     const elStats = d.querySelector('.stats') || (()=>{ const s=document.createElement('div'); s.className='stats'; seatsBox.parentNode.insertBefore(s, seatsBox.nextSibling); return s; })();
     elStats.innerHTML = `已完成 <span style="color:var(--done);font-weight:900">${n}</span> / ${seats.length} 個座號`;
+  }
+  function showPraise(root, n){
+    const p = document.createElement('div');
+    p.className='praise';
+    p.textContent = '動作神速，真優秀！';
+    root.style.position='relative';
+    root.appendChild(p);
+    setTimeout(()=> p.remove(), 1400);
   }
 
   const reset = document.createElement('button');
